@@ -5,7 +5,6 @@ import type {
   GraphEdge,
   ResourceAction,
   ConfigModule,
-  ConfigExpression,
 } from "./types";
 
 export function parseTerraformPlan(planJSON: string): GraphData {
@@ -79,15 +78,12 @@ function collectReferences(
   while (stack.length) {
     const mod = stack.pop()!;
     for (const resource of mod.resources ?? []) {
+      const refs = new Set<string>();
+      collectRefsDeep(resource.expressions, refs);
       const deps = new Set<string>();
-      for (const expr of Object.values(resource.expressions ?? {})) {
-        const exprs: ConfigExpression[] = Array.isArray(expr) ? expr : [expr];
-        for (const e of exprs) {
-          for (const ref of e.references ?? []) {
-            const dep = resourceAddrFromRef(ref);
-            if (dep && dep !== resource.address) deps.add(dep);
-          }
-        }
+      for (const ref of refs) {
+        const dep = resourceAddrFromRef(ref);
+        if (dep && dep !== resource.address) deps.add(dep);
       }
       if (deps.size) out.set(resource.address, deps);
     }
@@ -96,6 +92,26 @@ function collectReferences(
     }
   }
   return out;
+}
+
+// Terraform encodes attribute *blocks* (subject {}, source {}, etc.) as arrays
+// of objects whose keys are themselves sub-expressions. Walk the whole tree
+// and pick up any `references` array we encounter — that's the only signal we
+// care about. `constant_value` and other leaves are ignored.
+function collectRefsDeep(val: unknown, into: Set<string>): void {
+  if (val === null || val === undefined) return;
+  if (Array.isArray(val)) {
+    for (const v of val) collectRefsDeep(v, into);
+    return;
+  }
+  if (typeof val !== "object") return;
+  for (const [key, child] of Object.entries(val as Record<string, unknown>)) {
+    if (key === "references" && Array.isArray(child)) {
+      for (const ref of child) if (typeof ref === "string") into.add(ref);
+    } else if (key !== "constant_value") {
+      collectRefsDeep(child, into);
+    }
+  }
 }
 
 function resourceAddrFromRef(ref: string): string | null {

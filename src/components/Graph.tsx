@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import cytoscape from "cytoscape";
 import type { Core, EventObject, NodeSingular } from "cytoscape";
+import dagre from "cytoscape-dagre";
 import type { GraphData, GraphNode, ResourceAction } from "../types";
 import "./Graph.css";
+
+// Register dagre as a layout extension. Cytoscape's bundled breadthfirst
+// layout uses shortest-path depth, which compresses real dependency DAGs:
+// anything that touches a root sits at depth 1 even if it also depends on a
+// long chain elsewhere. Dagre does proper longest-path layering, which is
+// what apply order actually looks like.
+cytoscape.use(dagre);
 
 interface GraphProps {
   data: GraphData;
@@ -84,11 +92,12 @@ export function Graph({ data }: GraphProps) {
         },
       ],
       layout: {
-        name: "breadthfirst",
-        directed: true,
+        name: "dagre",
+        rankDir: "TB",
+        nodeSep: 40,
+        rankSep: 80,
         padding: 30,
-        spacingFactor: 1.4,
-      },
+      } as cytoscape.LayoutOptions,
     });
 
     cyRef.current = cy;
