@@ -93,6 +93,15 @@ export function Graph({ data }: GraphProps) {
 
     cyRef.current = cy;
 
+    // If the container starts at zero dimensions (common when the parent
+    // flex layout hasn't settled yet on first render), Cytoscape needs to
+    // be told to re-measure once the container actually has size.
+    const ro = new ResizeObserver(() => {
+      cy.resize();
+      cy.fit(undefined, 30);
+    });
+    ro.observe(containerRef.current);
+
     cy.on("tap", "node", (evt: EventObject) => {
       const node = evt.target as NodeSingular;
       const related = node.predecessors().union(node.successors()).union(node);
@@ -111,6 +120,7 @@ export function Graph({ data }: GraphProps) {
     });
 
     return () => {
+      ro.disconnect();
       cy.destroy();
       cyRef.current = null;
     };

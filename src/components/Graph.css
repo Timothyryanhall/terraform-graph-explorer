@@ -1,5 +1,7 @@
 .graph-container {
   display: flex;
+  flex: 1;
+  min-width: 0;
   height: 100%;
   gap: 16px;
   padding: 16px;
@@ -7,6 +9,7 @@
 
 .graph-canvas {
   flex: 1;
+  min-width: 0;
   background: #f8fafc;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
