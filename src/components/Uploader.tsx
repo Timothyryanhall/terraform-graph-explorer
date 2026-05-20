@@ -95,6 +95,15 @@ export function Uploader({
                 <span className="sample-icon">⚙️</span>
                 <span className="sample-name">App stack</span>
               </button>
+              <button
+                className="sample-button"
+                onClick={() => onSampleSelected("sample-tls-bundle")}
+                disabled={loading}
+                title="Real terraform show -json output; source under samples/tls-bundle/"
+              >
+                <span className="sample-icon">🔐</span>
+                <span className="sample-name">TLS bundle</span>
+              </button>
             </div>
           </div>
         </div>

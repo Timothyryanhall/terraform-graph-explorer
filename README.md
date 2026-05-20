@@ -2,7 +2,7 @@
 
 A small browser-only tool for staring at Terraform plans. You give it the JSON output of `terraform show -json tfplan`, it gives you back the dependency graph — what depends on what, what the longest chain is, whether you've accidentally introduced a cycle.
 
-[Live demo](https://timothyryanhall.github.io/terraform-graph-explorer/) · drop a plan in or pick a sample.
+[Live demo](https://timothyryanhall.github.io/terraform-graph-explorer/) · drop a plan in or pick a sample. The "TLS bundle" sample is real `terraform show -json` output ([source](samples/tls-bundle/main.tf)); the other two are illustrative plans I wrote by hand to keep the JSON small.
 
 ## Why
 
