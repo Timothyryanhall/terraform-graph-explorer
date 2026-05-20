@@ -1,0 +1,269 @@
+{
+  "format_version": "1.1",
+  "terraform_version": "1.5.0",
+  "planned_values": {
+    "root_module": {
+      "resources": []
+    }
+  },
+  "resource_changes": {
+    "aws_vpc.main": {
+      "type": "aws_vpc",
+      "name": "main",
+      "provider_name": "aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "cidr_block": "10.0.0.0/16",
+          "enable_dns_hostnames": true,
+          "enable_dns_support": true
+        },
+        "after_unknown": {
+          "arn": true,
+          "id": true,
+          "instance_tenancy": true,
+          "ipv6_association_id": true,
+          "ipv6_cidr_block": true,
+          "main_route_table_id": true,
+          "tags": true
+        }
+      }
+    },
+    "aws_subnet.public_a": {
+      "type": "aws_subnet",
+      "name": "public_a",
+      "provider_name": "aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "availability_zone": "us-east-1a",
+          "cidr_block": "10.0.1.0/24",
+          "vpc_id": "${aws_vpc.main.id}"
+        },
+        "after_unknown": {
+          "id": true,
+          "ipv6_cidr_block": true,
+          "tags": true
+        }
+      }
+    },
+    "aws_subnet.public_b": {
+      "type": "aws_subnet",
+      "name": "public_b",
+      "provider_name": "aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "availability_zone": "us-east-1b",
+          "cidr_block": "10.0.2.0/24",
+          "vpc_id": "${aws_vpc.main.id}"
+        },
+        "after_unknown": {
+          "id": true,
+          "ipv6_cidr_block": true,
+          "tags": true
+        }
+      }
+    },
+    "aws_internet_gateway.main": {
+      "type": "aws_internet_gateway",
+      "name": "main",
+      "provider_name": "aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "vpc_id": "${aws_vpc.main.id}"
+        },
+        "after_unknown": {
+          "id": true,
+          "arn": true,
+          "tags": true
+        }
+      }
+    },
+    "aws_route_table.public": {
+      "type": "aws_route_table",
+      "name": "public",
+      "provider_name": "aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "vpc_id": "${aws_vpc.main.id}",
+          "route": [
+            {
+              "cidr_block": "0.0.0.0/0",
+              "gateway_id": "${aws_internet_gateway.main.id}"
+            }
+          ]
+        },
+        "after_unknown": {
+          "id": true,
+          "arn": true,
+          "tags": true,
+          "route": [true]
+        }
+      }
+    },
+    "aws_route_table_association.public_a": {
+      "type": "aws_route_table_association",
+      "name": "public_a",
+      "provider_name": "aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "route_table_id": "${aws_route_table.public.id}",
+          "subnet_id": "${aws_subnet.public_a.id}"
+        },
+        "after_unknown": {
+          "id": true
+        }
+      }
+    },
+    "aws_route_table_association.public_b": {
+      "type": "aws_route_table_association",
+      "name": "public_b",
+      "provider_name": "aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "route_table_id": "${aws_route_table.public.id}",
+          "subnet_id": "${aws_subnet.public_b.id}"
+        },
+        "after_unknown": {
+          "id": true
+        }
+      }
+    },
+    "aws_security_group.alb": {
+      "type": "aws_security_group",
+      "name": "alb",
+      "provider_name": "aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "alb-sg",
+          "vpc_id": "${aws_vpc.main.id}",
+          "ingress": [
+            {
+              "from_port": 80,
+              "to_port": 80,
+              "protocol": "tcp",
+              "cidr_blocks": ["0.0.0.0/0"]
+            }
+          ]
+        },
+        "after_unknown": {
+          "id": true,
+          "arn": true,
+          "tags": true,
+          "ingress": [true]
+        }
+      }
+    },
+    "aws_lb.main": {
+      "type": "aws_lb",
+      "name": "main",
+      "provider_name": "aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "main-alb",
+          "load_balancer_type": "application",
+          "security_groups": ["${aws_security_group.alb.id}"],
+          "subnets": [
+            "${aws_subnet.public_a.id}",
+            "${aws_subnet.public_b.id}"
+          ]
+        },
+        "after_unknown": {
+          "id": true,
+          "arn": true,
+          "dns_name": true
+        }
+      }
+    }
+  },
+  "configuration": {
+    "resource": {
+      "aws_vpc": {
+        "main": {
+          "cidr_block": "10.0.0.0/16",
+          "enable_dns_hostnames": true,
+          "enable_dns_support": true
+        }
+      },
+      "aws_subnet": {
+        "public_a": {
+          "availability_zone": "us-east-1a",
+          "cidr_block": "10.0.1.0/24",
+          "vpc_id": "${aws_vpc.main.id}"
+        },
+        "public_b": {
+          "availability_zone": "us-east-1b",
+          "cidr_block": "10.0.2.0/24",
+          "vpc_id": "${aws_vpc.main.id}"
+        }
+      },
+      "aws_internet_gateway": {
+        "main": {
+          "vpc_id": "${aws_vpc.main.id}"
+        }
+      },
+      "aws_route_table": {
+        "public": {
+          "vpc_id": "${aws_vpc.main.id}",
+          "route": [
+            {
+              "cidr_block": "0.0.0.0/0",
+              "gateway_id": "${aws_internet_gateway.main.id}"
+            }
+          ]
+        }
+      },
+      "aws_route_table_association": {
+        "public_a": {
+          "route_table_id": "${aws_route_table.public.id}",
+          "subnet_id": "${aws_subnet.public_a.id}"
+        },
+        "public_b": {
+          "route_table_id": "${aws_route_table.public.id}",
+          "subnet_id": "${aws_subnet.public_b.id}"
+        }
+      },
+      "aws_security_group": {
+        "alb": {
+          "name": "alb-sg",
+          "vpc_id": "${aws_vpc.main.id}",
+          "ingress": [
+            {
+              "from_port": 80,
+              "to_port": 80,
+              "protocol": "tcp",
+              "cidr_blocks": ["0.0.0.0/0"]
+            }
+          ]
+        }
+      },
+      "aws_lb": {
+        "main": {
+          "name": "main-alb",
+          "load_balancer_type": "application",
+          "security_groups": ["${aws_security_group.alb.id}"],
+          "subnets": [
+            "${aws_subnet.public_a.id}",
+            "${aws_subnet.public_b.id}"
+          ]
+        }
+      }
+    }
+  }
+}
