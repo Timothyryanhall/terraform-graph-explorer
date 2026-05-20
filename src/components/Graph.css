@@ -86,3 +86,13 @@
   background: #f1f5f9;
   color: #475569;
 }
+
+.action-replace {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+
+.action-read {
+  background: #e0f2fe;
+  color: #075985;
+}

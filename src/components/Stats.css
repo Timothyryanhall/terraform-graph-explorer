@@ -95,6 +95,11 @@
   color: #7f1d1d;
 }
 
+.stat-badge.replace {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+
 .warning-section {
   margin: 16px;
   padding: 12px;
