@@ -1,269 +1,226 @@
 {
-  "format_version": "1.1",
-  "terraform_version": "1.5.0",
-  "planned_values": {
-    "root_module": {
-      "resources": []
-    }
-  },
-  "resource_changes": {
-    "aws_vpc.main": {
+  "format_version": "1.2",
+  "terraform_version": "1.6.0",
+  "resource_changes": [
+    {
+      "address": "aws_vpc.main",
       "type": "aws_vpc",
       "name": "main",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "cidr_block": "10.0.0.0/16",
-          "enable_dns_hostnames": true,
-          "enable_dns_support": true
-        },
-        "after_unknown": {
-          "arn": true,
-          "id": true,
-          "instance_tenancy": true,
-          "ipv6_association_id": true,
-          "ipv6_cidr_block": true,
-          "main_route_table_id": true,
-          "tags": true
-        }
+        "after": { "cidr_block": "10.0.0.0/16", "enable_dns_hostnames": true },
+        "after_unknown": { "id": true, "arn": true, "tags": true }
       }
     },
-    "aws_subnet.public_a": {
+    {
+      "address": "aws_subnet.public_a",
       "type": "aws_subnet",
       "name": "public_a",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "availability_zone": "us-east-1a",
-          "cidr_block": "10.0.1.0/24",
-          "vpc_id": "${aws_vpc.main.id}"
-        },
-        "after_unknown": {
-          "id": true,
-          "ipv6_cidr_block": true,
-          "tags": true
-        }
+        "after": { "availability_zone": "us-east-1a", "cidr_block": "10.0.1.0/24" },
+        "after_unknown": { "id": true, "vpc_id": true, "tags": true }
       }
     },
-    "aws_subnet.public_b": {
+    {
+      "address": "aws_subnet.public_b",
       "type": "aws_subnet",
       "name": "public_b",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "availability_zone": "us-east-1b",
-          "cidr_block": "10.0.2.0/24",
-          "vpc_id": "${aws_vpc.main.id}"
-        },
-        "after_unknown": {
-          "id": true,
-          "ipv6_cidr_block": true,
-          "tags": true
-        }
+        "after": { "availability_zone": "us-east-1b", "cidr_block": "10.0.2.0/24" },
+        "after_unknown": { "id": true, "vpc_id": true, "tags": true }
       }
     },
-    "aws_internet_gateway.main": {
+    {
+      "address": "aws_internet_gateway.main",
       "type": "aws_internet_gateway",
       "name": "main",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "vpc_id": "${aws_vpc.main.id}"
-        },
-        "after_unknown": {
-          "id": true,
-          "arn": true,
-          "tags": true
-        }
+        "after": {},
+        "after_unknown": { "id": true, "arn": true, "vpc_id": true }
       }
     },
-    "aws_route_table.public": {
+    {
+      "address": "aws_route_table.public",
       "type": "aws_route_table",
       "name": "public",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "vpc_id": "${aws_vpc.main.id}",
-          "route": [
-            {
-              "cidr_block": "0.0.0.0/0",
-              "gateway_id": "${aws_internet_gateway.main.id}"
-            }
-          ]
-        },
-        "after_unknown": {
-          "id": true,
-          "arn": true,
-          "tags": true,
-          "route": [true]
-        }
+        "after": {},
+        "after_unknown": { "id": true, "arn": true, "vpc_id": true, "route": true }
       }
     },
-    "aws_route_table_association.public_a": {
+    {
+      "address": "aws_route_table_association.public_a",
       "type": "aws_route_table_association",
       "name": "public_a",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "route_table_id": "${aws_route_table.public.id}",
-          "subnet_id": "${aws_subnet.public_a.id}"
-        },
-        "after_unknown": {
-          "id": true
-        }
+        "after": {},
+        "after_unknown": { "id": true, "subnet_id": true, "route_table_id": true }
       }
     },
-    "aws_route_table_association.public_b": {
+    {
+      "address": "aws_route_table_association.public_b",
       "type": "aws_route_table_association",
       "name": "public_b",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "route_table_id": "${aws_route_table.public.id}",
-          "subnet_id": "${aws_subnet.public_b.id}"
-        },
-        "after_unknown": {
-          "id": true
-        }
+        "after": {},
+        "after_unknown": { "id": true, "subnet_id": true, "route_table_id": true }
       }
     },
-    "aws_security_group.alb": {
+    {
+      "address": "aws_security_group.alb",
       "type": "aws_security_group",
       "name": "alb",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "name": "alb-sg",
-          "vpc_id": "${aws_vpc.main.id}",
-          "ingress": [
-            {
-              "from_port": 80,
-              "to_port": 80,
-              "protocol": "tcp",
-              "cidr_blocks": ["0.0.0.0/0"]
-            }
-          ]
-        },
-        "after_unknown": {
-          "id": true,
-          "arn": true,
-          "tags": true,
-          "ingress": [true]
-        }
+        "after": { "name": "alb-sg" },
+        "after_unknown": { "id": true, "arn": true, "vpc_id": true, "ingress": true }
       }
     },
-    "aws_lb.main": {
+    {
+      "address": "aws_lb.main",
       "type": "aws_lb",
       "name": "main",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "name": "main-alb",
-          "load_balancer_type": "application",
-          "security_groups": ["${aws_security_group.alb.id}"],
-          "subnets": [
-            "${aws_subnet.public_a.id}",
-            "${aws_subnet.public_b.id}"
-          ]
-        },
-        "after_unknown": {
-          "id": true,
-          "arn": true,
-          "dns_name": true
-        }
+        "after": { "name": "main-alb", "load_balancer_type": "application" },
+        "after_unknown": { "id": true, "arn": true, "dns_name": true, "subnets": true, "security_groups": true }
       }
     }
-  },
+  ],
   "configuration": {
-    "resource": {
-      "aws_vpc": {
-        "main": {
-          "cidr_block": "10.0.0.0/16",
-          "enable_dns_hostnames": true,
-          "enable_dns_support": true
-        }
-      },
-      "aws_subnet": {
-        "public_a": {
-          "availability_zone": "us-east-1a",
-          "cidr_block": "10.0.1.0/24",
-          "vpc_id": "${aws_vpc.main.id}"
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_vpc.main",
+          "mode": "managed",
+          "type": "aws_vpc",
+          "name": "main",
+          "expressions": {
+            "cidr_block": { "constant_value": "10.0.0.0/16" }
+          }
         },
-        "public_b": {
-          "availability_zone": "us-east-1b",
-          "cidr_block": "10.0.2.0/24",
-          "vpc_id": "${aws_vpc.main.id}"
-        }
-      },
-      "aws_internet_gateway": {
-        "main": {
-          "vpc_id": "${aws_vpc.main.id}"
-        }
-      },
-      "aws_route_table": {
-        "public": {
-          "vpc_id": "${aws_vpc.main.id}",
-          "route": [
-            {
-              "cidr_block": "0.0.0.0/0",
-              "gateway_id": "${aws_internet_gateway.main.id}"
-            }
-          ]
-        }
-      },
-      "aws_route_table_association": {
-        "public_a": {
-          "route_table_id": "${aws_route_table.public.id}",
-          "subnet_id": "${aws_subnet.public_a.id}"
+        {
+          "address": "aws_subnet.public_a",
+          "mode": "managed",
+          "type": "aws_subnet",
+          "name": "public_a",
+          "expressions": {
+            "vpc_id": { "references": ["aws_vpc.main.id", "aws_vpc.main"] },
+            "cidr_block": { "constant_value": "10.0.1.0/24" }
+          }
         },
-        "public_b": {
-          "route_table_id": "${aws_route_table.public.id}",
-          "subnet_id": "${aws_subnet.public_b.id}"
-        }
-      },
-      "aws_security_group": {
-        "alb": {
-          "name": "alb-sg",
-          "vpc_id": "${aws_vpc.main.id}",
-          "ingress": [
-            {
-              "from_port": 80,
-              "to_port": 80,
-              "protocol": "tcp",
-              "cidr_blocks": ["0.0.0.0/0"]
+        {
+          "address": "aws_subnet.public_b",
+          "mode": "managed",
+          "type": "aws_subnet",
+          "name": "public_b",
+          "expressions": {
+            "vpc_id": { "references": ["aws_vpc.main.id", "aws_vpc.main"] },
+            "cidr_block": { "constant_value": "10.0.2.0/24" }
+          }
+        },
+        {
+          "address": "aws_internet_gateway.main",
+          "mode": "managed",
+          "type": "aws_internet_gateway",
+          "name": "main",
+          "expressions": {
+            "vpc_id": { "references": ["aws_vpc.main.id", "aws_vpc.main"] }
+          }
+        },
+        {
+          "address": "aws_route_table.public",
+          "mode": "managed",
+          "type": "aws_route_table",
+          "name": "public",
+          "expressions": {
+            "vpc_id": { "references": ["aws_vpc.main.id", "aws_vpc.main"] },
+            "route": [
+              {
+                "cidr_block": { "constant_value": "0.0.0.0/0" },
+                "gateway_id": {
+                  "references": ["aws_internet_gateway.main.id", "aws_internet_gateway.main"]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "address": "aws_route_table_association.public_a",
+          "mode": "managed",
+          "type": "aws_route_table_association",
+          "name": "public_a",
+          "expressions": {
+            "subnet_id": { "references": ["aws_subnet.public_a.id", "aws_subnet.public_a"] },
+            "route_table_id": { "references": ["aws_route_table.public.id", "aws_route_table.public"] }
+          }
+        },
+        {
+          "address": "aws_route_table_association.public_b",
+          "mode": "managed",
+          "type": "aws_route_table_association",
+          "name": "public_b",
+          "expressions": {
+            "subnet_id": { "references": ["aws_subnet.public_b.id", "aws_subnet.public_b"] },
+            "route_table_id": { "references": ["aws_route_table.public.id", "aws_route_table.public"] }
+          }
+        },
+        {
+          "address": "aws_security_group.alb",
+          "mode": "managed",
+          "type": "aws_security_group",
+          "name": "alb",
+          "expressions": {
+            "vpc_id": { "references": ["aws_vpc.main.id", "aws_vpc.main"] },
+            "name": { "constant_value": "alb-sg" }
+          }
+        },
+        {
+          "address": "aws_lb.main",
+          "mode": "managed",
+          "type": "aws_lb",
+          "name": "main",
+          "expressions": {
+            "name": { "constant_value": "main-alb" },
+            "load_balancer_type": { "constant_value": "application" },
+            "security_groups": {
+              "references": ["aws_security_group.alb.id", "aws_security_group.alb"]
+            },
+            "subnets": {
+              "references": [
+                "aws_subnet.public_a.id",
+                "aws_subnet.public_a",
+                "aws_subnet.public_b.id",
+                "aws_subnet.public_b"
+              ]
             }
-          ]
+          }
         }
-      },
-      "aws_lb": {
-        "main": {
-          "name": "main-alb",
-          "load_balancer_type": "application",
-          "security_groups": ["${aws_security_group.alb.id}"],
-          "subnets": [
-            "${aws_subnet.public_a.id}",
-            "${aws_subnet.public_b.id}"
-          ]
-        }
-      }
+      ]
     }
   }
 }

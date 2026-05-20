@@ -1,327 +1,290 @@
 {
-  "format_version": "1.1",
-  "terraform_version": "1.5.0",
-  "planned_values": {
-    "root_module": {
-      "resources": []
-    }
-  },
-  "resource_changes": {
-    "aws_vpc.app": {
+  "format_version": "1.2",
+  "terraform_version": "1.6.0",
+  "resource_changes": [
+    {
+      "address": "aws_vpc.app",
       "type": "aws_vpc",
       "name": "app",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "cidr_block": "10.1.0.0/16",
-          "enable_dns_hostnames": true,
-          "enable_dns_support": true
-        },
-        "after_unknown": {
-          "id": true,
-          "arn": true
-        }
+        "after": { "cidr_block": "10.1.0.0/16" },
+        "after_unknown": { "id": true, "arn": true }
       }
     },
-    "aws_subnet.app_private": {
+    {
+      "address": "aws_subnet.app_private",
       "type": "aws_subnet",
       "name": "app_private",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "cidr_block": "10.1.1.0/24",
-          "vpc_id": "${aws_vpc.app.id}"
-        },
-        "after_unknown": {
-          "id": true
-        }
+        "after": { "cidr_block": "10.1.1.0/24" },
+        "after_unknown": { "id": true, "vpc_id": true }
       }
     },
-    "aws_subnet.db_private": {
+    {
+      "address": "aws_subnet.app_public",
       "type": "aws_subnet",
-      "name": "db_private",
-      "provider_name": "aws",
+      "name": "app_public",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "cidr_block": "10.1.2.0/24",
-          "vpc_id": "${aws_vpc.app.id}"
-        },
-        "after_unknown": {
-          "id": true
-        }
+        "after": { "cidr_block": "10.1.2.0/24" },
+        "after_unknown": { "id": true, "vpc_id": true }
       }
     },
-    "aws_security_group.app": {
-      "type": "aws_security_group",
-      "name": "app",
-      "provider_name": "aws",
-      "change": {
-        "actions": ["create"],
-        "before": null,
-        "after": {
-          "name": "app-sg",
-          "vpc_id": "${aws_vpc.app.id}"
-        },
-        "after_unknown": {
-          "id": true,
-          "arn": true
-        }
-      }
-    },
-    "aws_security_group.db": {
+    {
+      "address": "aws_security_group.db",
       "type": "aws_security_group",
       "name": "db",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "name": "db-sg",
-          "vpc_id": "${aws_vpc.app.id}"
-        },
-        "after_unknown": {
-          "id": true,
-          "arn": true
-        }
+        "after": { "name": "db-sg" },
+        "after_unknown": { "id": true, "arn": true, "vpc_id": true }
       }
     },
-    "aws_security_group_rule.app_to_db": {
-      "type": "aws_security_group_rule",
-      "name": "app_to_db",
-      "provider_name": "aws",
+    {
+      "address": "aws_security_group.app",
+      "type": "aws_security_group",
+      "name": "app",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "type": "ingress",
-          "from_port": 5432,
-          "to_port": 5432,
-          "protocol": "tcp",
-          "security_group_id": "${aws_security_group.db.id}",
-          "source_security_group_id": "${aws_security_group.app.id}"
-        },
-        "after_unknown": {
-          "id": true
-        }
+        "after": { "name": "app-sg" },
+        "after_unknown": { "id": true, "arn": true, "vpc_id": true }
       }
     },
-    "aws_db_subnet_group.main": {
+    {
+      "address": "aws_db_subnet_group.app",
       "type": "aws_db_subnet_group",
-      "name": "main",
-      "provider_name": "aws",
+      "name": "app",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
         "actions": ["create"],
         "before": null,
-        "after": {
-          "subnet_ids": ["${aws_subnet.db_private.id}"]
-        },
-        "after_unknown": {
-          "id": true,
-          "arn": true
-        }
+        "after": { "name": "app-db-subnets" },
+        "after_unknown": { "id": true, "subnet_ids": true }
       }
     },
-    "aws_db_instance.postgres": {
+    {
+      "address": "aws_db_instance.app",
       "type": "aws_db_instance",
-      "name": "postgres",
-      "provider_name": "aws",
+      "name": "app",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
-        "actions": ["create"],
-        "before": null,
-        "after": {
-          "allocated_storage": 20,
+        "actions": ["delete", "create"],
+        "before": {
           "engine": "postgres",
-          "engine_version": "14.7",
-          "instance_class": "db.t3.micro",
-          "db_name": "appdb",
-          "username": "admin",
-          "password": "${random_password.db_password.result}",
-          "skip_final_snapshot": true,
-          "db_subnet_group_name": "${aws_db_subnet_group.main.name}",
-          "vpc_security_group_ids": ["${aws_security_group.db.id}"]
+          "engine_version": "14.9",
+          "instance_class": "db.t3.micro"
         },
-        "after_unknown": {
-          "id": true,
-          "endpoint": true,
-          "arn": true
-        }
-      }
-    },
-    "random_password.db_password": {
-      "type": "random_password",
-      "name": "db_password",
-      "provider_name": "random",
-      "change": {
-        "actions": ["create"],
-        "before": null,
         "after": {
-          "length": 16,
-          "special": true
+          "engine": "postgres",
+          "engine_version": "15.5",
+          "instance_class": "db.t3.small",
+          "allocated_storage": 50
         },
-        "after_unknown": {
-          "id": true,
-          "result": true,
-          "bcrypt_hash": true
-        }
+        "after_unknown": { "id": true, "arn": true, "endpoint": true }
       }
     },
-    "aws_launch_template.app": {
+    {
+      "address": "aws_launch_template.app",
       "type": "aws_launch_template",
       "name": "app",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
-        "actions": ["create"],
-        "before": null,
-        "after": {
-          "image_id": "ami-0c55b159cbfafe1f0",
-          "instance_type": "t3.micro",
-          "security_groups": ["${aws_security_group.app.id}"]
-        },
-        "after_unknown": {
-          "id": true,
-          "arn": true,
-          "latest_version": true
-        }
+        "actions": ["update"],
+        "before": { "image_id": "ami-0abcd1234", "instance_type": "t3.small" },
+        "after": { "image_id": "ami-0efgh5678", "instance_type": "t3.medium" },
+        "after_unknown": { "latest_version": true }
       }
     },
-    "aws_autoscaling_group.app": {
+    {
+      "address": "aws_autoscaling_group.app",
       "type": "aws_autoscaling_group",
       "name": "app",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
-        "actions": ["create"],
-        "before": null,
-        "after": {
-          "name": "app-asg",
-          "launch_template": {
-            "id": "${aws_launch_template.app.id}",
-            "version": "$Latest"
-          },
-          "min_size": 2,
-          "max_size": 4,
-          "desired_capacity": 2,
-          "vpc_zone_identifier": ["${aws_subnet.app_private.id}"]
-        },
-        "after_unknown": {
-          "id": true,
-          "arn": true
-        }
+        "actions": ["update"],
+        "before": { "min_size": 2, "max_size": 4, "desired_capacity": 2 },
+        "after": { "min_size": 2, "max_size": 6, "desired_capacity": 3 },
+        "after_unknown": {}
       }
     },
-    "aws_cloudwatch_log_group.app": {
+    {
+      "address": "aws_cloudwatch_log_group.app",
       "type": "aws_cloudwatch_log_group",
       "name": "app",
-      "provider_name": "aws",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
       "change": {
-        "actions": ["create"],
-        "before": null,
-        "after": {
-          "name": "/aws/app/logs",
-          "retention_in_days": 7
-        },
-        "after_unknown": {
-          "id": true,
-          "arn": true
-        }
+        "actions": ["no-op"],
+        "before": { "name": "/app/prod", "retention_in_days": 30 },
+        "after": { "name": "/app/prod", "retention_in_days": 30 },
+        "after_unknown": {}
+      }
+    },
+    {
+      "address": "aws_cloudwatch_log_group.app_legacy",
+      "type": "aws_cloudwatch_log_group",
+      "name": "app_legacy",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete"],
+        "before": { "name": "/app/legacy", "retention_in_days": 7 },
+        "after": null,
+        "after_unknown": {}
       }
     }
-  },
+  ],
   "configuration": {
-    "resource": {
-      "aws_vpc": {
-        "app": {
-          "cidr_block": "10.1.0.0/16",
-          "enable_dns_hostnames": true,
-          "enable_dns_support": true
-        }
-      },
-      "aws_subnet": {
-        "app_private": {
-          "cidr_block": "10.1.1.0/24",
-          "vpc_id": "${aws_vpc.app.id}"
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_vpc.app",
+          "mode": "managed",
+          "type": "aws_vpc",
+          "name": "app",
+          "expressions": {
+            "cidr_block": { "constant_value": "10.1.0.0/16" }
+          }
         },
-        "db_private": {
-          "cidr_block": "10.1.2.0/24",
-          "vpc_id": "${aws_vpc.app.id}"
-        }
-      },
-      "aws_security_group": {
-        "app": {
-          "name": "app-sg",
-          "vpc_id": "${aws_vpc.app.id}"
+        {
+          "address": "aws_subnet.app_private",
+          "mode": "managed",
+          "type": "aws_subnet",
+          "name": "app_private",
+          "expressions": {
+            "vpc_id": { "references": ["aws_vpc.app.id", "aws_vpc.app"] },
+            "cidr_block": { "constant_value": "10.1.1.0/24" }
+          }
         },
-        "db": {
-          "name": "db-sg",
-          "vpc_id": "${aws_vpc.app.id}"
+        {
+          "address": "aws_subnet.app_public",
+          "mode": "managed",
+          "type": "aws_subnet",
+          "name": "app_public",
+          "expressions": {
+            "vpc_id": { "references": ["aws_vpc.app.id", "aws_vpc.app"] },
+            "cidr_block": { "constant_value": "10.1.2.0/24" }
+          }
+        },
+        {
+          "address": "aws_security_group.db",
+          "mode": "managed",
+          "type": "aws_security_group",
+          "name": "db",
+          "expressions": {
+            "vpc_id": { "references": ["aws_vpc.app.id", "aws_vpc.app"] },
+            "name": { "constant_value": "db-sg" }
+          }
+        },
+        {
+          "address": "aws_security_group.app",
+          "mode": "managed",
+          "type": "aws_security_group",
+          "name": "app",
+          "expressions": {
+            "vpc_id": { "references": ["aws_vpc.app.id", "aws_vpc.app"] },
+            "name": { "constant_value": "app-sg" }
+          }
+        },
+        {
+          "address": "aws_db_subnet_group.app",
+          "mode": "managed",
+          "type": "aws_db_subnet_group",
+          "name": "app",
+          "expressions": {
+            "name": { "constant_value": "app-db-subnets" },
+            "subnet_ids": {
+              "references": [
+                "aws_subnet.app_private.id",
+                "aws_subnet.app_private"
+              ]
+            }
+          }
+        },
+        {
+          "address": "aws_db_instance.app",
+          "mode": "managed",
+          "type": "aws_db_instance",
+          "name": "app",
+          "expressions": {
+            "engine": { "constant_value": "postgres" },
+            "engine_version": { "constant_value": "15.5" },
+            "instance_class": { "constant_value": "db.t3.small" },
+            "db_subnet_group_name": {
+              "references": ["aws_db_subnet_group.app.name", "aws_db_subnet_group.app"]
+            },
+            "vpc_security_group_ids": {
+              "references": ["aws_security_group.db.id", "aws_security_group.db"]
+            }
+          }
+        },
+        {
+          "address": "aws_launch_template.app",
+          "mode": "managed",
+          "type": "aws_launch_template",
+          "name": "app",
+          "expressions": {
+            "image_id": { "constant_value": "ami-0efgh5678" },
+            "instance_type": { "constant_value": "t3.medium" },
+            "vpc_security_group_ids": {
+              "references": ["aws_security_group.app.id", "aws_security_group.app"]
+            }
+          }
+        },
+        {
+          "address": "aws_autoscaling_group.app",
+          "mode": "managed",
+          "type": "aws_autoscaling_group",
+          "name": "app",
+          "expressions": {
+            "vpc_zone_identifier": {
+              "references": [
+                "aws_subnet.app_private.id",
+                "aws_subnet.app_private",
+                "aws_subnet.app_public.id",
+                "aws_subnet.app_public"
+              ]
+            },
+            "launch_template": [
+              {
+                "id": {
+                  "references": ["aws_launch_template.app.id", "aws_launch_template.app"]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "address": "aws_cloudwatch_log_group.app",
+          "mode": "managed",
+          "type": "aws_cloudwatch_log_group",
+          "name": "app",
+          "expressions": {
+            "name": { "constant_value": "/app/prod" },
+            "retention_in_days": { "constant_value": 30 }
+          }
+        },
+        {
+          "address": "aws_cloudwatch_log_group.app_legacy",
+          "mode": "managed",
+          "type": "aws_cloudwatch_log_group",
+          "name": "app_legacy",
+          "expressions": {
+            "name": { "constant_value": "/app/legacy" },
+            "retention_in_days": { "constant_value": 7 }
+          }
         }
-      },
-      "aws_security_group_rule": {
-        "app_to_db": {
-          "type": "ingress",
-          "from_port": 5432,
-          "to_port": 5432,
-          "protocol": "tcp",
-          "security_group_id": "${aws_security_group.db.id}",
-          "source_security_group_id": "${aws_security_group.app.id}"
-        }
-      },
-      "aws_db_subnet_group": {
-        "main": {
-          "subnet_ids": ["${aws_subnet.db_private.id}"]
-        }
-      },
-      "aws_db_instance": {
-        "postgres": {
-          "allocated_storage": 20,
-          "engine": "postgres",
-          "engine_version": "14.7",
-          "instance_class": "db.t3.micro",
-          "db_name": "appdb",
-          "username": "admin",
-          "password": "${random_password.db_password.result}",
-          "skip_final_snapshot": true,
-          "db_subnet_group_name": "${aws_db_subnet_group.main.name}",
-          "vpc_security_group_ids": ["${aws_security_group.db.id}"]
-        }
-      },
-      "random_password": {
-        "db_password": {
-          "length": 16,
-          "special": true
-        }
-      },
-      "aws_launch_template": {
-        "app": {
-          "image_id": "ami-0c55b159cbfafe1f0",
-          "instance_type": "t3.micro",
-          "security_groups": ["${aws_security_group.app.id}"]
-        }
-      },
-      "aws_autoscaling_group": {
-        "app": {
-          "name": "app-asg",
-          "launch_template": {
-            "id": "${aws_launch_template.app.id}",
-            "version": "$Latest"
-          },
-          "min_size": 2,
-          "max_size": 4,
-          "desired_capacity": 2,
-          "vpc_zone_identifier": ["${aws_subnet.app_private.id}"]
-        }
-      },
-      "aws_cloudwatch_log_group": {
-        "app": {
-          "name": "/aws/app/logs",
-          "retention_in_days": 7
-        }
-      }
+      ]
     }
   }
 }

@@ -1,277 +1,189 @@
-import type { TerraformPlan, GraphData, GraphNode, GraphEdge } from "./types";
+import type {
+  TerraformPlan,
+  GraphData,
+  GraphNode,
+  GraphEdge,
+  ResourceAction,
+  ConfigModule,
+  ConfigExpression,
+} from "./types";
 
 export function parseTerraformPlan(planJSON: string): GraphData {
   const plan: TerraformPlan = JSON.parse(planJSON);
 
   const nodes: GraphNode[] = [];
-  const edges: GraphEdge[] = [];
   const nodeMap = new Map<string, GraphNode>();
 
-  // Create nodes from resource changes
-  for (const [address, change] of Object.entries(plan.resource_changes)) {
-    const action = change.change.actions[0] || "no-op";
+  for (const change of plan.resource_changes ?? []) {
     const node: GraphNode = {
-      id: address,
+      id: change.address,
       type: change.type,
       name: change.name,
-      address,
-      action,
+      address: change.address,
+      action: collapseActions(change.change.actions),
       isDependent: false,
       dependencyCount: 0,
     };
     nodes.push(node);
-    nodeMap.set(address, node);
+    nodeMap.set(change.address, node);
   }
 
-  // Extract dependencies from configuration
-  const addressToDeps = extractDependencies(plan.configuration);
-
-  // Build edges
-  for (const [address, deps] of addressToDeps.entries()) {
-    for (const dep of deps) {
-      if (nodeMap.has(dep)) {
-        edges.push({
-          source: dep,
-          target: address,
-          implicit: false,
-        });
-        nodeMap.get(address)!.dependencyCount++;
-        nodeMap.get(dep)!.isDependent = true;
-      }
+  const refs = collectReferences(plan.configuration?.root_module);
+  const edges: GraphEdge[] = [];
+  for (const [target, sources] of refs) {
+    for (const source of sources) {
+      if (!nodeMap.has(source) || source === target) continue;
+      edges.push({ source, target });
+      nodeMap.get(target)!.dependencyCount++;
+      nodeMap.get(source)!.isDependent = true;
     }
   }
 
-  // Calculate stats
   const resourceCount: Record<string, number> = {};
-  const actionCounts: Record<string, number> = {};
-
+  const actionCounts: Partial<Record<ResourceAction, number>> = {};
   for (const node of nodes) {
-    resourceCount[node.type] = (resourceCount[node.type] || 0) + 1;
-    actionCounts[node.action] = (actionCounts[node.action] || 0) + 1;
+    resourceCount[node.type] = (resourceCount[node.type] ?? 0) + 1;
+    actionCounts[node.action] = (actionCounts[node.action] ?? 0) + 1;
   }
-
-  // Detect cycles using DFS
-  const cycles = detectCycles(nodeMap, edges);
-
-  // Find critical path
-  const criticalPath = findCriticalPath(nodeMap, edges);
 
   return {
     nodes,
     edges,
     resourceCount,
     actionCounts,
-    cycles,
-    criticalPath,
+    cycles: detectCycles(nodes, edges),
+    criticalPath: findCriticalPath(nodes, edges),
   };
 }
 
-function extractDependencies(
-  config: Record<string, any>,
-  parentAddr = ""
-): Map<string, string[]> {
-  const deps = new Map<string, string[]>();
-
-  function traverse(obj: any, addr: string) {
-    if (!obj || typeof obj !== "object") return;
-
-    if (Array.isArray(obj)) {
-      for (const item of obj) traverse(item, addr);
-      return;
-    }
-
-    const entries = Object.entries(obj as Record<string, unknown>);
-    for (const [key, value] of entries) {
-      if (key === "resource" && typeof value === "object" && value !== null) {
-        const resourceEntries = Object.entries(value as Record<string, unknown>);
-        for (const [type, typeObj] of resourceEntries) {
-          if (typeof typeObj === "object" && typeObj !== null) {
-            const typeEntries = Object.entries(typeObj as Record<string, unknown>);
-            for (const [name, resObj] of typeEntries) {
-              const fullAddr = `${type}.${name}`;
-              const resDeps = extractResourceDeps(resObj);
-              if (resDeps.length > 0) {
-                deps.set(fullAddr, resDeps);
-              }
-              traverse(resObj, fullAddr);
-            }
-          }
-        }
-      } else {
-        traverse(value, addr);
-      }
-    }
-  }
-
-  traverse(config, parentAddr);
-  return deps;
+// Terraform encodes a replace as ["delete","create"]; treat any multi-action set
+// containing both as a replace, and otherwise take the first action.
+function collapseActions(actions: ResourceChange["change"]["actions"]): ResourceAction {
+  if (actions.includes("delete") && actions.includes("create")) return "replace";
+  return (actions[0] ?? "no-op") as ResourceAction;
 }
+// (local alias so the import list stays clean)
+type ResourceChange = import("./types").ResourceChange;
 
-function extractResourceDeps(resource: any): string[] {
-  const deps = new Set<string>();
+// Walks the configuration tree (including nested module_calls) and returns, for
+// each resource address, the set of resource addresses it depends on. The
+// `references` array on each expression points at things like
+// "aws_vpc.main.id" — we normalize to the "type.name" prefix.
+function collectReferences(
+  root: ConfigModule | undefined
+): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  if (!root) return out;
 
-  function findDepsInValue(val: any) {
-    if (typeof val === "string") {
-      // Match Terraform references like "aws_instance.example" or "${aws_instance.example.id}"
-      const matches = val.match(
-        /(?:\$\{)?(?!local\.)([a-z_]+(?:\.[a-z_]+)+)(?:\.[a-z_0-9.]+)?\)?/g
-      );
-      if (matches) {
-        for (const match of matches) {
-          const clean = match
-            .replace(/^\$\{/, "")
-            .replace(/\}$/, "")
-            .split(".")[0];
-          if (clean && !clean.startsWith("data.") && !clean.startsWith("var.")) {
-            // Try to extract resource address
-            const parts = match.split(".");
-            if (
-              parts.length >= 2 &&
-              parts[0].match(/^[a-z_]+$/) &&
-              parts[1].match(/^[a-z_0-9]+$/)
-            ) {
-              deps.add(`${parts[0]}.${parts[1]}`);
-            }
+  const stack: ConfigModule[] = [root];
+  while (stack.length) {
+    const mod = stack.pop()!;
+    for (const resource of mod.resources ?? []) {
+      const deps = new Set<string>();
+      for (const expr of Object.values(resource.expressions ?? {})) {
+        const exprs: ConfigExpression[] = Array.isArray(expr) ? expr : [expr];
+        for (const e of exprs) {
+          for (const ref of e.references ?? []) {
+            const dep = resourceAddrFromRef(ref);
+            if (dep && dep !== resource.address) deps.add(dep);
           }
         }
       }
-    } else if (typeof val === "object" && val !== null) {
-      if (Array.isArray(val)) {
-        for (const item of val) findDepsInValue(item);
-      } else {
-        const obj = val as Record<string, unknown>;
-        for (const v of Object.values(obj)) findDepsInValue(v);
-      }
+      if (deps.size) out.set(resource.address, deps);
+    }
+    for (const call of Object.values(mod.module_calls ?? {})) {
+      stack.push(call.module);
     }
   }
-
-  findDepsInValue(resource);
-  return Array.from(deps);
+  return out;
 }
 
-function detectCycles(
-  nodeMap: Map<string, GraphNode>,
-  edges: GraphEdge[]
-): string[][] {
+function resourceAddrFromRef(ref: string): string | null {
+  // Skip data.*, var.*, local.*, module.*, path.*, terraform.*, count.*, each.*
+  if (/^(data|var|local|module|path|terraform|count|each|self)\./.test(ref)) {
+    return null;
+  }
+  // "aws_vpc.main" or "aws_vpc.main.id" or "aws_vpc.main[0].id"
+  const m = ref.match(/^([a-zA-Z][\w]*)\.([\w-]+)/);
+  return m ? `${m[1]}.${m[2]}` : null;
+}
+
+function detectCycles(nodes: GraphNode[], edges: GraphEdge[]): string[][] {
+  const adj = new Map<string, string[]>();
+  for (const n of nodes) adj.set(n.id, []);
+  for (const e of edges) adj.get(e.source)?.push(e.target);
+
   const cycles: string[][] = [];
   const visited = new Set<string>();
-  const recursionStack = new Set<string>();
-
-  const adjList = new Map<string, string[]>();
-  for (const node of nodeMap.values()) {
-    adjList.set(node.id, []);
-  }
-  for (const edge of edges) {
-    adjList.get(edge.target)?.push(edge.source);
-  }
+  const stack = new Set<string>();
 
   function dfs(node: string, path: string[]) {
     visited.add(node);
-    recursionStack.add(node);
+    stack.add(node);
     path.push(node);
-
-    for (const neighbor of adjList.get(node) || []) {
-      if (!visited.has(neighbor)) {
-        dfs(neighbor, path);
-      } else if (recursionStack.has(neighbor)) {
-        const cycleStart = path.indexOf(neighbor);
-        if (cycleStart !== -1) {
-          cycles.push([...path.slice(cycleStart), neighbor]);
-        }
+    for (const next of adj.get(node) ?? []) {
+      if (!visited.has(next)) {
+        dfs(next, path);
+      } else if (stack.has(next)) {
+        const start = path.indexOf(next);
+        if (start !== -1) cycles.push([...path.slice(start), next]);
       }
     }
-
     path.pop();
-    recursionStack.delete(node);
+    stack.delete(node);
   }
 
-  for (const nodeId of nodeMap.keys()) {
-    if (!visited.has(nodeId)) {
-      dfs(nodeId, []);
-    }
-  }
-
+  for (const n of nodes) if (!visited.has(n.id)) dfs(n.id, []);
   return cycles;
 }
 
-function findCriticalPath(
-  nodeMap: Map<string, GraphNode>,
-  edges: GraphEdge[]
-): string[] {
-  // Topological sort
-  const adjList = new Map<string, string[]>();
-  const inDegree = new Map<string, number>();
-
-  for (const node of nodeMap.values()) {
-    adjList.set(node.id, []);
-    inDegree.set(node.id, 0);
+// Longest path in the DAG via topological-sort + relaxation. Returns the path
+// itself (not just its length) so the UI can highlight it.
+function findCriticalPath(nodes: GraphNode[], edges: GraphEdge[]): string[] {
+  const adj = new Map<string, string[]>();
+  const rev = new Map<string, string[]>();
+  const indeg = new Map<string, number>();
+  for (const n of nodes) {
+    adj.set(n.id, []);
+    rev.set(n.id, []);
+    indeg.set(n.id, 0);
+  }
+  for (const e of edges) {
+    adj.get(e.source)!.push(e.target);
+    rev.get(e.target)!.push(e.source);
+    indeg.set(e.target, (indeg.get(e.target) ?? 0) + 1);
   }
 
-  for (const edge of edges) {
-    adjList.get(edge.source)?.push(edge.target);
-    inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
-  }
+  const queue = nodes.filter((n) => indeg.get(n.id) === 0).map((n) => n.id);
+  const dist = new Map<string, number>(nodes.map((n) => [n.id, 0]));
+  const pred = new Map<string, string | null>(nodes.map((n) => [n.id, null]));
 
-  const queue: string[] = [];
-  for (const [nodeId, degree] of inDegree.entries()) {
-    if (degree === 0) queue.push(nodeId);
-  }
-
-  const sortedOrder: string[] = [];
-  const distance = new Map<string, number>();
-
-  for (const node of nodeMap.keys()) {
-    distance.set(node, 0);
-  }
-
-  while (queue.length > 0) {
-    const node = queue.shift()!;
-    sortedOrder.push(node);
-
-    for (const neighbor of adjList.get(node) || []) {
-      const newDist = (distance.get(node) || 0) + 1;
-      if (newDist > (distance.get(neighbor) || 0)) {
-        distance.set(neighbor, newDist);
+  let head = 0;
+  let maxDist = 0;
+  let maxNode: string | null = null;
+  while (head < queue.length) {
+    const node = queue[head++];
+    const nodeDist = dist.get(node)!;
+    if (nodeDist > maxDist) {
+      maxDist = nodeDist;
+      maxNode = node;
+    }
+    for (const next of adj.get(node) ?? []) {
+      if (nodeDist + 1 > (dist.get(next) ?? 0)) {
+        dist.set(next, nodeDist + 1);
+        pred.set(next, node);
       }
-
-      inDegree.set(neighbor, (inDegree.get(neighbor) || 0) - 1);
-      if (inDegree.get(neighbor) === 0) {
-        queue.push(neighbor);
-      }
+      indeg.set(next, indeg.get(next)! - 1);
+      if (indeg.get(next) === 0) queue.push(next);
     }
   }
 
-  const maxDist = Math.max(...Array.from(distance.values()));
-  const criticalPath: string[] = [];
-
-  for (const [nodeId, dist] of distance.entries()) {
-    if (dist === maxDist) {
-      let current = nodeId;
-      const path = [current];
-
-      // Backtrack to find the path
-      while (true) {
-        let predecessor: string | null = null;
-        for (const edge of edges) {
-          if (
-            edge.target === current &&
-            (distance.get(edge.source) || 0) === (distance.get(current) || 0) - 1
-          ) {
-            predecessor = edge.source;
-            break;
-          }
-        }
-        if (!predecessor) break;
-        path.unshift(predecessor);
-        current = predecessor;
-      }
-
-      if (path.length > criticalPath.length) {
-        criticalPath.length = 0;
-        criticalPath.push(...path);
-      }
-    }
+  if (!maxNode) return [];
+  const path: string[] = [];
+  let cur: string | null = maxNode;
+  while (cur) {
+    path.unshift(cur);
+    cur = pred.get(cur) ?? null;
   }
-
-  return criticalPath;
+  return path;
 }
