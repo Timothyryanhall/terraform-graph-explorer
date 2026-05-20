@@ -1,9 +1,15 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Graph } from "./components/Graph";
 import { Uploader } from "./components/Uploader";
 import { Stats } from "./components/Stats";
 import type { GraphData } from "./types";
 import "./App.css";
+
+interface WorkerResult {
+  success: boolean;
+  data?: GraphData;
+  error?: string;
+}
 
 function App() {
   const [graphData, setGraphData] = useState<GraphData | null>(null);
@@ -11,28 +17,32 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const workerRef = useRef<Worker | null>(null);
+  const reqIdRef = useRef(0);
 
-  const initWorker = () => {
-    if (workerRef.current) return;
-    workerRef.current = new Worker(
+  useEffect(() => {
+    const worker = new Worker(
       new URL("./parser.worker.ts", import.meta.url),
       { type: "module" }
     );
-  };
+    workerRef.current = worker;
+    return () => {
+      worker.terminate();
+      workerRef.current = null;
+    };
+  }, []);
 
   const handleParse = (content: string, name: string) => {
-    initWorker();
+    const worker = workerRef.current;
+    if (!worker) return;
+
+    const reqId = ++reqIdRef.current;
     setLoading(true);
     setError(null);
     setFileName(name);
 
-    workerRef.current!.onmessage = (
-      event: MessageEvent<{
-        success: boolean;
-        data?: GraphData;
-        error?: string;
-      }>
-    ) => {
+    const onMessage = (event: MessageEvent<WorkerResult>) => {
+      if (reqId !== reqIdRef.current) return; // stale parse, ignore
+      worker.removeEventListener("message", onMessage);
       if (event.data.success && event.data.data) {
         setGraphData(event.data.data);
       } else {
@@ -40,30 +50,24 @@ function App() {
       }
       setLoading(false);
     };
-
-    workerRef.current!.onerror = (error: ErrorEvent) => {
-      setError(error.message || "Worker error");
-      setLoading(false);
-    };
+    worker.addEventListener("message", onMessage);
 
     try {
-      workerRef.current!.postMessage(content);
+      worker.postMessage(content);
     } catch (err) {
+      worker.removeEventListener("message", onMessage);
       setError(err instanceof Error ? err.message : "Unknown error");
       setLoading(false);
     }
-  };
-
-  const handleFileSelected = (content: string, name: string) => {
-    handleParse(content, name);
   };
 
   const handleSampleSelected = async (sampleName: string) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/${sampleName}.json`);
-      if (!response.ok) throw new Error("Failed to load sample");
+      const url = `${import.meta.env.BASE_URL}${sampleName}.json`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Failed to load sample (${response.status})`);
       const content = await response.text();
       handleParse(content, `${sampleName}.json`);
     } catch (err) {
@@ -81,9 +85,10 @@ function App() {
   if (!graphData) {
     return (
       <Uploader
-        onFileSelected={handleFileSelected}
+        onFileSelected={handleParse}
         onSampleSelected={handleSampleSelected}
         loading={loading}
+        error={error}
         fileName={fileName || undefined}
       />
     );
@@ -96,7 +101,7 @@ function App() {
       {error && (
         <div className="error-toast">
           <span>{error}</span>
-          <button onClick={() => setError(null)}>✕</button>
+          <button onClick={() => setError(null)} aria-label="Dismiss">✕</button>
         </div>
       )}
     </div>

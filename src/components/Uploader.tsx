@@ -5,6 +5,7 @@ interface UploaderProps {
   onFileSelected: (content: string, filename: string) => void;
   onSampleSelected: (sampleName: string) => void;
   loading: boolean;
+  error?: string | null;
   fileName?: string;
 }
 
@@ -12,20 +13,16 @@ export function Uploader({
   onFileSelected,
   onSampleSelected,
   loading,
+  error,
   fileName,
 }: UploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      onFileSelected(content, file.name);
-    };
-    reader.readAsText(file);
+    const content = await file.text();
+    onFileSelected(content, file.name);
   };
 
   return (
@@ -46,22 +43,31 @@ export function Uploader({
           </div>
         )}
 
+        {error && (
+          <div className="upload-error" role="alert">
+            {error}
+          </div>
+        )}
+
         <div className="upload-section">
           <div className="upload-area">
             <div className="upload-icon">📄</div>
             <h2>Upload Terraform Plan</h2>
-            <p>Drag and drop your plan.json file or click to browse</p>
+            <p>
+              Generate one with <code>terraform show -json tfplan</code>, then drop
+              the resulting JSON here.
+            </p>
             <button
               className="upload-button"
               onClick={() => fileInputRef.current?.click()}
               disabled={loading}
             >
-              {loading ? "Parsing..." : "Select File"}
+              {loading ? "Parsing…" : "Select file"}
             </button>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".json"
+              accept=".json,application/json"
               onChange={handleFileChange}
               style={{ display: "none" }}
               disabled={loading}
@@ -71,7 +77,7 @@ export function Uploader({
           <div className="divider">OR</div>
 
           <div className="samples-section">
-            <h3>Try a Sample</h3>
+            <h3>Try a sample</h3>
             <div className="samples-grid">
               <button
                 className="sample-button"
@@ -79,7 +85,7 @@ export function Uploader({
                 disabled={loading}
               >
                 <span className="sample-icon">🌐</span>
-                <span className="sample-name">VPC Setup</span>
+                <span className="sample-name">VPC + ALB</span>
               </button>
               <button
                 className="sample-button"
@@ -87,7 +93,7 @@ export function Uploader({
                 disabled={loading}
               >
                 <span className="sample-icon">⚙️</span>
-                <span className="sample-name">App Stack</span>
+                <span className="sample-name">App stack</span>
               </button>
             </div>
           </div>
@@ -97,19 +103,21 @@ export function Uploader({
           <h3>How it works</h3>
           <ul>
             <li>
-              <strong>Parse:</strong> Upload a Terraform plan JSON file or use
-              a sample
+              <strong>Parse:</strong> The plan JSON is parsed in a Web Worker so
+              the UI stays responsive on large plans.
             </li>
             <li>
-              <strong>Visualize:</strong> See resource dependencies as an
-              interactive graph
+              <strong>Visualize:</strong> Each <code>resource_changes</code> entry
+              becomes a node; references in <code>configuration</code> become
+              edges.
             </li>
             <li>
-              <strong>Analyze:</strong> Click nodes to see details and
-              dependencies
+              <strong>Analyze:</strong> Click a node to highlight everything it
+              depends on and everything that depends on it.
             </li>
             <li>
-              <strong>Plan:</strong> Understand change impact and apply order
+              <strong>Detect:</strong> Cycles flagged automatically; longest
+              dependency chain shown as the critical path.
             </li>
           </ul>
         </div>
